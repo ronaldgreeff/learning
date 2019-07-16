@@ -144,9 +144,16 @@ def advanced_queries():
 
 	connection.create_function("square", 1, square)
 
-	qs2 = crsr.execute("SELECT square( price-(SELECT avg(price) FROM stocks) ) FROM stocks")
-	variance = stddev([i[0] for i in qs2])
+	# Create a variable to not keep re-calculating average price (long winded, but it's SQLite...)
+	crsr.execute("BEGIN")
+	crsr.execute("PRAGMA temp_store=2")
+	crsr.execute("CREATE TEMP TABLE _Variables(RealValue REAL)")
+	crsr.execute("INSERT INTO _Variables (RealValue) VALUES (0.0)")
+	crsr.execute("UPDATE _Variables SET RealValue = (SELECT avg(price) FROM stocks)")
 
+	qs2 = crsr.execute("SELECT square( price-(SELECT RealValue FROM _Variables LIMIT 1) ) FROM stocks")
+	variance = stddev([i[0] for i in qs2])
+	crsr.execute("DROP TABLE _Variables")
 
 	# Let’s refactor the data into 2 tables - stock_info to store general info about the stock itself
 	# (ie. symbol, name)and stock_prices to store the collected data on price (ie. symbol, datetime, price).
@@ -156,7 +163,7 @@ def advanced_queries():
 		crsr.execute("CREATE TABLE stock_prices AS SELECT symbol, date, price FROM stocks")
 		connection.commit()
 
-	create_new_tables()
+	# create_new_tables()
 
 
 	# Don’t forget to also drop certain columns from the original table and rename it.
@@ -167,13 +174,14 @@ def advanced_queries():
 		crsr.execute("DROP TABLE temp_table")
 		connection.commit()
 
-	alter_old_table()
+	# alter_old_table()
 
 
 	# Now, we do not need to repeat both symbol and name for each row of price data. Instead,
 	# join the 2 tables in order to view more information on the stock with each row of price
 
-	qs3 = crsr.execute("SELECT i.symbol, i.name, p.date, p.price FROM stock_info AS i JOIN stock_prices AS p")
+	# qs3 = crsr.execute("SELECT i.symbol, i.name, p.date, p.price FROM stock_info AS i JOIN stock_prices AS p")
+
 
 	# Add more variables to the stock_info table and update the data (e.g., sector, industry, etc).
 
@@ -182,16 +190,19 @@ def advanced_queries():
 		crsr.execute("ALTER TABLE stock_info ADD industry TEXT")
 		connection.commit()
 
-	add_columns()
+	# add_columns()
 
-	crsr.execute("UPDATE stock_info SET sector='Financial Services', industry='Banks - Global' WHERE symbol = 'BAC' ")
-	crsr.execute("UPDATE stock_info SET sector='Technology', industry='Software - Infrastructure' WHERE symbol = 'LPSN' ")
-	crsr.execute("UPDATE stock_info SET sector='Technology', industry='Software - Application' WHERE symbol = 'WDAY' ")
-	connection.commit()
+	def insert_extras():
+		crsr.execute("UPDATE stock_info SET sector='Financial Services', industry='Banks - Global' WHERE symbol = 'BAC' ")
+		crsr.execute("UPDATE stock_info SET sector='Technology', industry='Software - Infrastructure' WHERE symbol = 'LPSN' ")
+		crsr.execute("UPDATE stock_info SET sector='Technology', industry='Software - Application' WHERE symbol = 'WDAY' ")
+		connection.commit()
+
+	# insert_extras()
 
 
 # create_table()
 # insert_data()
 # basic_queries()
 # intermediate_queries()
-# advanced_queries()
+advanced_queries()
