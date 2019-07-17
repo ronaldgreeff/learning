@@ -61,15 +61,19 @@ def basic_queries():
 
 	for stock in stock_names:
 
+
 		# What are the distinct stocks in the table?
 		q1 = "SELECT name, count(*) FROM stocks WHERE name = '{0}' GROUP BY '{0}'".format(stock)
+
 
 		# Query all data for a single stock. Do you notice any overall trends?
 		q2 = "SELECT * FROM stocks WHERE name = '{}'".format(stock)
 
+
 	# Which rows have a price above 100? between 40 to 50, etc?
 	q3 = "SELECT * FROM stocks WHERE price > 100"
 	q4 = "SELECT * FROM stocks WHERE price >= 15 AND price <= 30"
+
 
 	# Sort the table by price. What are the minimum and maximum prices?
 	q5 = "SELECT * FROM stocks ORDER BY price DESC"
@@ -77,7 +81,7 @@ def basic_queries():
 
 def intermediate_queries():
 
-	def dow(s):
+	def day_of_week(s):
 		return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][dt.strptime(s, '%Y-%m-%d %H-%M-%S-%f').weekday()]
 
 
@@ -103,7 +107,7 @@ def intermediate_queries():
 		} for stock in stock_names}
 
 	for result in qs:
-		stocks_by_week[ result[0] ][ dow(result[1]) ].append( result[2] )
+		stocks_by_week[ result[0] ][ day_of_week(result[1]) ].append( result[2] )
 
 	key_figs = {}
 
@@ -144,12 +148,10 @@ def advanced_queries():
 
 	connection.create_function("square", 1, square)
 
-	# Create a variable to not keep re-calculating average price (long winded, but it's SQLite...)
-	crsr.execute("BEGIN")
-	crsr.execute("PRAGMA temp_store=2")
+	# Assign variable for average price so that it's not re-calculated for each row
+	# SQLite doesn't have this capability so store value in temporary table
 	crsr.execute("CREATE TEMP TABLE _Variables(RealValue REAL)")
-	crsr.execute("INSERT INTO _Variables (RealValue) VALUES (0.0)")
-	crsr.execute("UPDATE _Variables SET RealValue = (SELECT avg(price) FROM stocks)")
+	crsr.execute("INSERT INTO _Variables (RealValue) SELECT avg(price) FROM stocks")
 
 	qs2 = crsr.execute("SELECT square( price-(SELECT RealValue FROM _Variables LIMIT 1) ) FROM stocks")
 	variance = stddev([i[0] for i in qs2])
