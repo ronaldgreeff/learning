@@ -182,7 +182,7 @@ def advanced_queries():
 	# Now, we do not need to repeat both symbol and name for each row of price data. Instead,
 	# join the 2 tables in order to view more information on the stock with each row of price
 
-	# qs3 = crsr.execute("SELECT i.symbol, i.name, p.date, p.price FROM stock_info AS i JOIN stock_prices AS p")
+	qs3 = crsr.execute("SELECT i.symbol, i.name, p.date, p.price FROM stock_info AS i JOIN stock_prices AS p")
 
 
 	# Add more variables to the stock_info table and update the data (e.g., sector, industry, etc).

@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from datetime import datetime as dt
 
 # https://discuss.codecademy.com/t/data-science-independent-project-2-explore-a-sample-database/419945
 
@@ -172,14 +173,33 @@ def intermediate_challenges():
 
 
 def advanced_challenges():
+
 	# How much revenue is generated each year, and what is its percent change 3 from the previous year?
 	# Hint: The InvoiceDate field is formatted as ‘yyyy-mm-dd hh:mm:ss’. Try taking a look at using the strftime() function
 	# to help extract just the year. Then, we can use a subquery in the SELECT statement to query the total revenue from the
-	# previous year. Remember that strftime() returns the date as a string, so we would need to CAST it to an integer type
+	# previous year.Remember that strftime() returns the date as a string, so we would need to CAST it to an integer type
 	# for this part. Finally, since we cannot refer to a column alias in the SELECT statement, it may be useful to use the
 	# WITH clause to query the previous year total in a temporary table, and then calculate the percent change in the final
 	# SELECT statement.
 
+	def get_year(datetime_obj):
+		return dt.fromisoformat(datetime_obj).year
+
+	connection.create_function('get_year', 1, get_year)
+
+	x = [i for i in crsr.execute("""
+
+		WITH revenue_per_year (instance_year, instance_total) AS (
+			SELECT CAST(get_year(InvoiceDate) AS INT), Total
+			FROM invoices
+		)
+
+		SELECT instance_year, sum(instance_total)
+		FROM revenue_per_year
+		GROUP BY instance_year
+		ORDER BY instance_year
+
+	""")]
 
 # basic_requirements()
 # intermediate_challenges()
