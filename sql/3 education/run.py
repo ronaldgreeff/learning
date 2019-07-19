@@ -62,11 +62,100 @@ def basic():
 					ELSE CAST(median_household_income AS INT)
 				END
 			FROM census_data)
-		SELECT state, min(mhi), max(mhi), avg(mhi), sum(mhi)
+		SELECT state, min(mhi), max(mhi), round(avg(mhi),2), sum(mhi)
 		FROM temp
 		GROUP BY state
 	""")
-	print(stats)
+	# print(stats)
+
+	# Joint analysis: Join the tables together for even more analysis.
+	# Do characteristics of the zip-code area, such as median household income, influence students’ performance in high school?
+	# Hint: One option would be to use the CASE statement to divide the median_household_income
+	# into income ranges (e.g., <$50k, $50k-$100k, $100k+) and find the average exam scores for each.
+
+	# in the WITH statement, CASE-> CAST val as REAL + add type (hs, uni, etc.) to new column
+
+	x = q("""
+
+		WITH census AS (
+		-- WITH census (hs, col1yr, col1yrplus, assoc, bach, mast, prof, doct) AS (
+			SELECT
+			CASE
+				WHEN pct_edu_hs THEN pct_edu_hs, '1'
+				WHEN pct_edu_somecollege_under1yr THEN pct_edu_somecollege_under1yr, '2'
+				WHEN pct_edu_somecollege_1plusyrs THEN pct_edu_somecollege_1plusyrs, '3'
+				WHEN pct_edu_attain_assoc THEN pct_edu_attain_assoc, '4'
+				WHEN pct_edu_attain_bach THEN pct_edu_attain_bach, '5'
+				WHEN pct_edu_attain_master THEN pct_edu_attain_master, '6'
+				WHEN pct_edu_attain_prof THEN pct_edu_attain_prof, '7'
+				WHEN pct_edu_attain_doct THEN pct_edu_attain_doct, '8'
+				-- WHEN pct_edu_hs THEN (pct_edu_hs || '1')
+				-- WHEN pct_edu_somecollege_under1yr THEN (pct_edu_somecollege_under1yr || '2')
+				-- WHEN pct_edu_somecollege_1plusyrs THEN (pct_edu_somecollege_1plusyrs || '3')
+				-- WHEN pct_edu_attain_assoc THEN (pct_edu_attain_assoc || '4')
+				-- WHEN pct_edu_attain_bach THEN (pct_edu_attain_bach || '5')
+				-- WHEN pct_edu_attain_master THEN (pct_edu_attain_master || '6')
+				-- WHEN pct_edu_attain_prof THEN (pct_edu_attain_prof || '7')
+				-- WHEN pct_edu_attain_doct THEN (pct_edu_attain_doct || '8')
+			END
+			FROM census_data)
+
+			SELECT
+				CASE
+					substr()
+				END
+			FROM census
+
+		-- WITH census (zip_code, state_code, mhi) AS (
+		-- 	SELECT zip_code, state_code,
+		-- 		CASE median_household_income
+		-- 			WHEN 'NULL' THEN NULL
+		-- 			ELSE CAST(median_household_income AS INT)
+		-- 		END
+		-- 	FROM census_data)
+
+		-- 	SELECT
+		-- 		CASE
+		-- 			WHEN census.mhi < 50000 THEN 'LOW'
+		-- 			WHEN census.mhi > 50000 THEN 'MEDIUM'
+		-- 			WHEN census.mhi < 10000 THEN 'HIGH'
+		-- 		END AS income
+
+		-- 	FROM census
+		-- 		INNER JOIN public_hs_data public
+		-- 		ON census.state_code = public.state_code
+		-- 		AND census.zip_code = public.zip_code
+
+		-- 	GROUP BY income
+
+	""")
+
+	print(x)
+
+	# q5 = q("""
+	# 	WITH census (zip, state) as (
+	# 		SELECT zip_code, state_code
+	# 		FROM census_data
+	# 	)
+	# 	SELECT public.zip_code
+	# 	FROM public_hs_data public
+	# 		LEFT JOIN census
+	# 		ON public.zip_code = census.zip
+	# 	WHERE census.zip IS NULL
+	# 	GROUP BY public.zip_code
+	# """)
+	# q6 = q("""
+	# 	WITH census (zip, state) as (
+	# 		SELECT zip_code, state_code
+	# 		FROM census_data
+	# 	)
+	# 	SELECT public.state_code
+	# 	FROM public_hs_data public
+	# 		LEFT JOIN census
+	# 		ON public.state_code = census.state
+	# 	WHERE census.state IS NULL
+	# 	GROUP BY public.state_code
+	# """)
 
 
 def intermediate():
