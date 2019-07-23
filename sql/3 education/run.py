@@ -77,33 +77,37 @@ def basic():
 
 	x = q("""
 
-		WITH census AS (
+		WITH census (income, perc_pop, edu_lvl) AS (
 		-- WITH census (hs, col1yr, col1yrplus, assoc, bach, mast, prof, doct) AS (
 			SELECT
 			CASE
-				WHEN pct_edu_hs THEN pct_edu_hs, '1'
-				WHEN pct_edu_somecollege_under1yr THEN pct_edu_somecollege_under1yr, '2'
-				WHEN pct_edu_somecollege_1plusyrs THEN pct_edu_somecollege_1plusyrs, '3'
-				WHEN pct_edu_attain_assoc THEN pct_edu_attain_assoc, '4'
-				WHEN pct_edu_attain_bach THEN pct_edu_attain_bach, '5'
-				WHEN pct_edu_attain_master THEN pct_edu_attain_master, '6'
-				WHEN pct_edu_attain_prof THEN pct_edu_attain_prof, '7'
-				WHEN pct_edu_attain_doct THEN pct_edu_attain_doct, '8'
-				-- WHEN pct_edu_hs THEN (pct_edu_hs || '1')
-				-- WHEN pct_edu_somecollege_under1yr THEN (pct_edu_somecollege_under1yr || '2')
-				-- WHEN pct_edu_somecollege_1plusyrs THEN (pct_edu_somecollege_1plusyrs || '3')
-				-- WHEN pct_edu_attain_assoc THEN (pct_edu_attain_assoc || '4')
-				-- WHEN pct_edu_attain_bach THEN (pct_edu_attain_bach || '5')
-				-- WHEN pct_edu_attain_master THEN (pct_edu_attain_master || '6')
-				-- WHEN pct_edu_attain_prof THEN (pct_edu_attain_prof || '7')
-				-- WHEN pct_edu_attain_doct THEN (pct_edu_attain_doct || '8')
+				WHEN median_household_income < 50000 THEN 'LOW'
+				WHEN median_household_income > 50000 THEN 'MEDIUM'
+				WHEN median_household_income < 10000 THEN 'HIGH'
+			END,
+			CASE
+				WHEN pct_edu_hs THEN CAST(pct_edu_hs AS REAL)
+				WHEN pct_edu_somecollege_under1yr THEN CAST(pct_edu_somecollege_under1yr AS REAL)
+				WHEN pct_edu_somecollege_1plusyrs THEN CAST(pct_edu_somecollege_1plusyrs AS REAL)
+				WHEN pct_edu_attain_assoc THEN CAST(pct_edu_attain_assoc AS REAL)
+				WHEN pct_edu_attain_bach THEN CAST(pct_edu_attain_bach AS REAL)
+				WHEN pct_edu_attain_master THEN CAST(pct_edu_attain_master AS REAL)
+				WHEN pct_edu_attain_prof THEN CAST(pct_edu_attain_prof AS REAL)
+				WHEN pct_edu_attain_doct THEN CAST(pct_edu_attain_doct AS REAL)
+			END,
+			CASE
+				WHEN pct_edu_hs THEN 'hs'
+				WHEN pct_edu_somecollege_under1yr THEN 'somecollege_under1yr'
+				WHEN pct_edu_somecollege_1plusyrs THEN 'somecollege_1plusyrs'
+				WHEN pct_edu_attain_assoc THEN 'attain_assoc'
+				WHEN pct_edu_attain_bach THEN 'attain_bach'
+				WHEN pct_edu_attain_master THEN 'attain_master'
+				WHEN pct_edu_attain_prof THEN 'attain_prof'
+				WHEN pct_edu_attain_doct THEN 'attain_doct'
 			END
 			FROM census_data)
 
-			SELECT
-				CASE
-					substr()
-				END
+			SELECT income
 			FROM census
 
 		-- WITH census (zip_code, state_code, mhi) AS (
