@@ -75,15 +75,14 @@ def basic():
 
 	# in the WITH statement, CASE-> CAST val as REAL + add type (hs, uni, etc.) to new column
 
-	x = q("""
+	income_vs_level_education = q("""
 
 		WITH census (income, perc_pop, edu_lvl) AS (
-		-- WITH census (hs, col1yr, col1yrplus, assoc, bach, mast, prof, doct) AS (
 			SELECT
 			CASE
-				WHEN median_household_income < 50000 THEN 'LOW'
-				WHEN median_household_income > 50000 THEN 'MEDIUM'
-				WHEN median_household_income < 10000 THEN 'HIGH'
+				WHEN CAST(median_household_income AS INT) > 50000 THEN 'LOW'
+				WHEN CAST(median_household_income AS INT) BETWEEN 50000 AND 100000 THEN 'MEDIUM'
+				WHEN CAST(median_household_income AS INT) < 100000 THEN 'HIGH'
 			END,
 			CASE
 				WHEN pct_edu_hs THEN CAST(pct_edu_hs AS REAL)
@@ -96,80 +95,61 @@ def basic():
 				WHEN pct_edu_attain_doct THEN CAST(pct_edu_attain_doct AS REAL)
 			END,
 			CASE
-				WHEN pct_edu_hs THEN 'hs'
-				WHEN pct_edu_somecollege_under1yr THEN 'somecollege_under1yr'
-				WHEN pct_edu_somecollege_1plusyrs THEN 'somecollege_1plusyrs'
-				WHEN pct_edu_attain_assoc THEN 'attain_assoc'
-				WHEN pct_edu_attain_bach THEN 'attain_bach'
-				WHEN pct_edu_attain_master THEN 'attain_master'
-				WHEN pct_edu_attain_prof THEN 'attain_prof'
-				WHEN pct_edu_attain_doct THEN 'attain_doct'
+				WHEN pct_edu_hs THEN 0
+				WHEN pct_edu_somecollege_under1yr THEN 1
+				WHEN pct_edu_somecollege_1plusyrs THEN 2
+				WHEN pct_edu_attain_assoc THEN 3
+				WHEN pct_edu_attain_bach THEN 4
+				WHEN pct_edu_attain_master THEN 5
+				WHEN pct_edu_attain_prof THEN 6
+				WHEN pct_edu_attain_doct THEN 7
 			END
 			FROM census_data)
 
-			SELECT income
+			SELECT income, avg(edu_lvl), min(edu_lvl), max(edu_lvl)
 			FROM census
-
-		-- WITH census (zip_code, state_code, mhi) AS (
-		-- 	SELECT zip_code, state_code,
-		-- 		CASE median_household_income
-		-- 			WHEN 'NULL' THEN NULL
-		-- 			ELSE CAST(median_household_income AS INT)
-		-- 		END
-		-- 	FROM census_data)
-
-		-- 	SELECT
-		-- 		CASE
-		-- 			WHEN census.mhi < 50000 THEN 'LOW'
-		-- 			WHEN census.mhi > 50000 THEN 'MEDIUM'
-		-- 			WHEN census.mhi < 10000 THEN 'HIGH'
-		-- 		END AS income
-
-		-- 	FROM census
-		-- 		INNER JOIN public_hs_data public
-		-- 		ON census.state_code = public.state_code
-		-- 		AND census.zip_code = public.zip_code
-
-		-- 	GROUP BY income
-
+			GROUP BY income
 	""")
-
-	print(x)
-
-	# q5 = q("""
-	# 	WITH census (zip, state) as (
-	# 		SELECT zip_code, state_code
-	# 		FROM census_data
-	# 	)
-	# 	SELECT public.zip_code
-	# 	FROM public_hs_data public
-	# 		LEFT JOIN census
-	# 		ON public.zip_code = census.zip
-	# 	WHERE census.zip IS NULL
-	# 	GROUP BY public.zip_code
-	# """)
-	# q6 = q("""
-	# 	WITH census (zip, state) as (
-	# 		SELECT zip_code, state_code
-	# 		FROM census_data
-	# 	)
-	# 	SELECT public.state_code
-	# 	FROM public_hs_data public
-	# 		LEFT JOIN census
-	# 		ON public.state_code = census.state
-	# 	WHERE census.state IS NULL
-	# 	GROUP BY public.state_code
-	# """)
 
 
 def intermediate():
-	pass
+	# On average, do students perform better on the math or reading exam? Find the number of states where students do better on the math exam, and vice versa.
+	# Hint: We can use the WITH clause to create a temporary table of average exam scores for each state, with an additional column for whether the average
+	# for math or reading is higher. (Note: Some states may not have standardized assessments, so be sure to also include an option for No Exam Data)
+	# Then, in your final SELECT statement, find the number of states fitting each condition.
 
+	math_reading_results = q("""
+		SELECT avg(pct_proficient_math), avg(pct_proficient_reading)
+		FROM public_hs_data
+	""")
+
+	math_reading_results_by_state = q("""
+
+		WITH preferred (state, avg_math, avg_read, higher) AS (
+			SELECT state_code, avg(pct_proficient_math), avg(pct_proficient_reading),
+			CASE
+				WHEN avg(pct_proficient_math) > avg(pct_proficient_reading) THEN 'math'
+				WHEN avg(pct_proficient_reading) > avg(pct_proficient_math) THEN 'reading'
+				ELSE 'no data'
+			END
+			FROM public_hs_data
+			GROUP BY state_code
+		)
+
+		SELECT COUNT(higher)
+		FROM preferred
+		GROUP BY higher
+
+	""")
 
 def advanced():
-	pass
+	# What is the average proficiency on state assessment exams for each zip code, and how do they compare to other zip codes in the same state?
+	# Note: Exam standards may vary by state, so limit comparison within states. Some states may not have exams. We can use the WITH clause to
+	# create a temporary table of exam score statistic for each state (e.g., min/max/avg) - then join it to each zip-code level data to compare.
+
+	
 
 
-basic()
+# basic()
 # intermediate()
-# advanced()
+advanced()
