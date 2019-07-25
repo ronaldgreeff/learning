@@ -149,7 +149,7 @@ def advanced():
 
 	state_zip_proficiency_comparison = q("""
 
-		WITH state_scores (state_code, read, math) AS (
+		WITH state_scores (state_code, avg_read, avg_math) AS (
 			SELECT
 				state_code,
 				avg(CAST(pct_proficient_reading AS REAL)),
@@ -164,13 +164,13 @@ def advanced():
 			state.state_code AS state,
 			public.zip_code AS zip,
 
-			ROUND(state.read,2) AS state_read_prof,
+			ROUND(state.avg_read,2) AS state_read_prof,
 			ROUND(CAST(public.pct_proficient_reading AS REAL),2) AS zip_read_prof,
-			ROUND(((CAST(public.pct_proficient_reading AS REAL)/state.read)),2) AS read_prof,
+			ROUND(((CAST(public.pct_proficient_reading AS REAL)/state.avg_read)),2) AS read_prof,
 
-			ROUND(state.math,2) AS state_math_prof,
+			ROUND(state.avg_math,2) AS state_math_prof,
 			ROUND(CAST(public.pct_proficient_math AS REAL),2) AS zip_math_prof,
-			ROUND(((CAST(public.pct_proficient_math AS REAL)/state.math)),2) AS math_prof
+			ROUND(((CAST(public.pct_proficient_math AS REAL)/state.avg_math)),2) AS math_prof
 
 		FROM public_hs_data public
 
@@ -188,4 +188,4 @@ def advanced():
 
 # basic()
 # intermediate()
-# advanced()
+advanced()
