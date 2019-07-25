@@ -97,33 +97,74 @@ def basic():
 	instances = q("""
 
 		WITH
-			lowest_airfare (carrier, fare) AS (
-				SELECT carrier_low, CAST(fare_low AS REAL)
+			main (carrier_low, fare, carrier_lg, ms) AS (
+				SELECT carrier_low, CAST(fare_low AS REAL), carrier_lg, CAST(large_ms AS REAL)
 				FROM airfare_data
 					WHERE fare_low != ''
-			),
-			largest_ms (carrier, fare) AS (
-				SELECT carrier_lg, CAST(large_ms AS REAL)
-				FROM airfare_data
-			)
+				),
+			min_fare AS (
+				SELECT DISTINCT carrier_low
+				FROM main
+					WHERE fare == (SELECT min(fare) FROM main)
+				),
+			max_mash AS (
+				SELECT DISTINCT carrier_lg
+				FROM main
+					WHERE ms == (SELECT max(ms) AS max FROM main)
+				)
 
-			SELECT *
-			FROM largest_ms
-			JOIN lowest_airfare
-				ON largest_ms.carrier == lowest_airfare.carrier
+			SELECT carrier_lg
+			FROM max_mash
+			JOIN min_fare
+				ON carrier_lg != carrier_low
 
 	""")
 
 	# print(lowest_airfare_carrier)
 	# print(largest_market_share)
-	print(instances)
+	# print(instances)
+
+	average_difference_in_fare = q("""
+
+		WITH diff_to_avg (diff) AS (
+			SELECT
+				(CAST(fare AS INT) - (SELECT avg(CAST(fare AS INT)) FROM airfare_data))
+			FROM airfare_data
+			)
+
+		SELECT avg(diff)
+		FROM diff_to_avg
+
+	""")
 
 def intermediate():
-	pass
+	# What is the percent change 3 in average fare from 2007 to 2017 by flight? How about from 1997 to 2017?
+		# Hint: We can use the WITH clause to create temporary tables containing the airfares, then join them together to compare the change over time.
+
+	change_in_avg_fare = q("""
+
+		WITH avg_annual (year, avg_fare) AS (
+			SELECT CAST(year AS INT), avg(CAST(fare AS REAL))
+			FROM airfare_data
+			GROUP BY year
+			)
+
+			SELECT sum(avg_fare)
+			FROM avg_annual
+			WHERE avg_annual.year BETWEEN {0} AND {1}
+
+	""".format(1997, 2017))
+
+	# How would you describe the overall trend in airfares from 1997 to 2017, as compared 2007 to 2017?
 
 def advanced():
 	pass
+	# What is the average fare for each quarter? Which quarter of the year has the highest overall average fare? lowest?
+		# Note: Not all flights (ie. each city-pair route) have data from all 4 quarters - which may skew the average. Let’s try considering only flights that have data available for all 4 quarters.
 
-basic()
-# intermediate()
+	# Considering only the flights that have data available on all 4 quarters of the year, which quarter has the highest overall average fare? lowest? Try breaking it down by year as well.
+		# Hint: To consider only flights that have data available for all 4 quarters, we could join the table with itself - each of those tables should be filtered to have data from one quarter.
+
+# basic()
+intermediate()
 # advanced()
