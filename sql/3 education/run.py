@@ -147,9 +147,45 @@ def advanced():
 	# Note: Exam standards may vary by state, so limit comparison within states. Some states may not have exams. We can use the WITH clause to
 	# create a temporary table of exam score statistic for each state (e.g., min/max/avg) - then join it to each zip-code level data to compare.
 
-	
+	state_zip_proficiency_comparison = q("""
 
+		WITH state_scores (state_code, read, math) AS (
+			SELECT
+				state_code,
+				avg(CAST(pct_proficient_reading AS REAL)),
+				avg(CAST(pct_proficient_math AS REAL))
+			FROM public_hs_data
+			WHERE pct_proficient_reading != 'NULL'
+			AND pct_proficient_math != 'NULL'
+			GROUP BY state_code
+		)
+
+		SELECT
+			state.state_code AS state,
+			public.zip_code AS zip,
+
+			ROUND(state.read,2) AS state_read_prof,
+			ROUND(CAST(public.pct_proficient_reading AS REAL),2) AS zip_read_prof,
+			ROUND(((CAST(public.pct_proficient_reading AS REAL)/state.read)),2) AS read_prof,
+
+			ROUND(state.math,2) AS state_math_prof,
+			ROUND(CAST(public.pct_proficient_math AS REAL),2) AS zip_math_prof,
+			ROUND(((CAST(public.pct_proficient_math AS REAL)/state.math)),2) AS math_prof
+
+		FROM public_hs_data public
+
+		JOIN state_scores state
+			ON public.state_code = state.state_code
+
+		WHERE pct_proficient_reading != 'NULL'
+		AND pct_proficient_math != 'NULL'
+
+		GROUP BY public.zip_code
+
+		ORDER BY math_prof DESC
+
+	""")
 
 # basic()
 # intermediate()
-advanced()
+# advanced()
