@@ -141,30 +141,85 @@ def intermediate():
 	# What is the percent change 3 in average fare from 2007 to 2017 by flight? How about from 1997 to 2017?
 		# Hint: We can use the WITH clause to create temporary tables containing the airfares, then join them together to compare the change over time.
 
-	change_in_avg_fare = q("""
+	l = []
 
-		WITH avg_annual (year, avg_fare) AS (
-			SELECT CAST(year AS INT), avg(CAST(fare AS REAL))
-			FROM airfare_data
-			GROUP BY year
-			)
+	for i in ((1997, 2017), (2007, 2017)):
 
-			SELECT sum(avg_fare)
-			FROM avg_annual
-			WHERE avg_annual.year BETWEEN {0} AND {1}
+		l.append(
 
-	""".format(1997, 2017))
+			q("""
+				WITH avg_annual (year, avg_fare) AS (
+					SELECT CAST(year AS INT), avg(CAST(fare AS REAL))
+					FROM airfare_data
+					GROUP BY year
+					)
+
+					SELECT sum(avg_fare)
+					FROM avg_annual
+					WHERE avg_annual.year BETWEEN {0} AND {1}
+
+			""".format(i[0], i[1]))
+
+		)
 
 	# How would you describe the overall trend in airfares from 1997 to 2017, as compared 2007 to 2017?
 
+	strings = ('airfare change 1997 - 2017', 'airfare change 2007 - 2017')
+	values = (l[0], l[1])
+
+	max_af = max(values)
+	min_af = min(values)
+
+	print("The {} ({}) was {}% greater than the {} ({})".format(
+		strings[values.index(max_af)],
+		round(max_af[0][0],2),
+		round(((max_af[0][0]-min_af[0][0])/max_af[0][0])*100,2),
+		strings[values.index(min_af)],
+		round(min_af[0][0],2),
+		))
+
 def advanced():
-	pass
 	# What is the average fare for each quarter? Which quarter of the year has the highest overall average fare? lowest?
-		# Note: Not all flights (ie. each city-pair route) have data from all 4 quarters - which may skew the average. Let’s try considering only flights that have data available for all 4 quarters.
+		# Note: Not all flights (ie. each city-pair route) have data from all 4 quarters - which may skew the average.
+		# Let’s try considering only flights that have data available for all 4 quarters.
+
+	quarterly = q("""
+		WITH quarter_data (quarter, av_fare) AS (
+			SELECT quarter, avg(fare)
+			FROM airfare_data
+
+			WHERE city1 NOT NULL
+			AND city2 NOT NULL
+			AND fare NOT NULL
+
+			GROUP BY quarter
+		)
+		SELECT quarter, av_fare
+		FROM quarter_data
+
+		WHERE av_fare == (SELECT min(av_fare) FROM quarter_data)
+		OR av_fare == (SELECT max(av_fare) FROM quarter_data)
+	""")
 
 	# Considering only the flights that have data available on all 4 quarters of the year, which quarter has the highest overall average fare? lowest? Try breaking it down by year as well.
 		# Hint: To consider only flights that have data available for all 4 quarters, we could join the table with itself - each of those tables should be filtered to have data from one quarter.
 
+	annually = q("""
+
+		WITH annual_data (year, quarter, fare) AS (
+			SELECT Year, quarter, fare
+			FROM airfare_data
+
+			WHERE city1 NOT NULL
+			AND city2 NOT NULL
+			AND fare NOT NULL
+		)
+		SELECT year, quarter, min(fare)
+		FROM annual_data
+		GROUP BY year
+
+	""")
+
 # basic()
-intermediate()
+# intermediate()
 # advanced()
