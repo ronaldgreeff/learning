@@ -80,9 +80,9 @@ def basic():
 		WITH census (income, perc_pop, edu_lvl) AS (
 			SELECT
 			CASE
-				WHEN CAST(median_household_income AS INT) > 50000 THEN 'LOW'
+				WHEN CAST(median_household_income AS INT) < 50000 THEN 'LOW'
 				WHEN CAST(median_household_income AS INT) BETWEEN 50000 AND 100000 THEN 'MEDIUM'
-				WHEN CAST(median_household_income AS INT) < 100000 THEN 'HIGH'
+				WHEN CAST(median_household_income AS INT) > 100000 THEN 'HIGH'
 			END,
 			CASE
 				WHEN pct_edu_hs THEN CAST(pct_edu_hs AS REAL)
@@ -188,4 +188,4 @@ def advanced():
 
 # basic()
 # intermediate()
-advanced()
+# advanced()
