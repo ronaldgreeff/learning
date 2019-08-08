@@ -1,0 +1,155 @@
+https://davidyeiser.com/tutorial/docker-wordpress-theme-setup
+
+DOCKER + WORDPRESS SETUP
+Published September 4, 2017 (updated 6/21/19)
+DOCKER IS A SOFTWARE CONTAINER PLATFORM that whisks away the complexities of setting up a local development environment into a single, packaged application. It truly is contained — no “running around” to various places installing databases, obscure supporting packages and so forth. No small accomplishment if you remember what it used to be like to try to mimic a web server setup on a local computer.
+
+My one grievance with Docker though is there seems to be different ways to do the same thing which makes it confusing at first to learn. For that reason I put together this tutorial on how I setup a local development environment (on a Mac) with Docker for building a WordPress theme. I’ll walk you through how to install WordPress (including a MySQL database, all via Docker) and setup your “wp-content” folder so you can work with actual theme files and plugins.
+
+At the end of this tutorial you will have set up a full WordPress environment that will allow you to install themes and plugins with ease, as well as develop your own new themes (or plugins). You will be able to access everything in a regular browser just like a live website, except it will all be on your local computer.
+
+TLDR
+The resulting code is on GitHub for reference.
+
+1 Install Docker
+Download and install the Docker Community Edition for Mac like you would any other application. This version of Docker includes Docker Compose which we’ll need for our WordPress setup.
+
+2 Start Docker
+Once Docker is installed, start the application. There will be a prompt for your system password, enter it and after it runs through a few more steps automatically you’ll see Docker running in the toolbar menu in the upper right of your screen. It’s a whale ship carrying cargo, clever little icon.
+
+3 Create New Directory
+Now it’s time to setup the directory in which we’ll build our WordPress theme. Create a new folder wherever you want and name it whatever you want. I named mine docker-wordpress-theme-setup to match the GitHub repository. We’ll set up our entire WordPress ecosystem in this directory.
+
+4 docker-compose.yml
+For the rest of the tutorial I’m assuming you have some familiarity with Terminal and have a favorite code editor. However, I’ll still call out the Terminal commands explicitly to do my best to make sure no one gets lost along the way.
+
+Open your code editor, create a blank file named docker-compose.yml and save it in the directory you created in Section 3. This is the file Docker will use to set up WordPress and the MySQL database.
+
+Open Terminal. When you start Terminal the blank screen will likely be in your home directory. Just in case type the command below and hit ‘return’:
+
+cd ~
+The cd command means “change directory” and the tilde is a shortcut to the home directory. So now you’re located in your home directory. Next we need to navigate to the directory we created in Section 3. For me, I type:
+
+cd docker-wordpress-theme-setup
+Once there, type ls and you should see your docker-compose.yml file.
+
+Now let’s add some instructions to create our WordPress setup. In your code editor, paste the following in the docker-compose.yml file and save it.
+
+version: '3'
+
+services:
+  db:
+    image: mysql:5.7
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: somewordpress
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:5.1.1-php7.3-apache
+    ports:
+      - "8000:80"
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    working_dir: /var/www/html
+    volumes:
+      - ./wp-content:/var/www/html/wp-content
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+volumes:
+  db_data:
+If you want to change the port that the WordPress install will use, just change the 8000 value in ports to whatever value you would like. If you want it to run on port 9210 you would make the change like so:
+
+ports:
+  - "9210:80"
+Then instead of localhost:8000, the URL would be: localhost:9210
+
+The first volumes parameter under wordpress is what tells Docker to surface the wp-content directory and the resulting WordPress directories in the local file system. (A special thanks to this Stack Overflow answer for helping me figure this part out.)
+
+You don’t have to change anything here, it’s a local path that is keyed off the directory the config.yml file is in. The wp-content directory along with the themes and plugins directories will be created automatically when we run the Docker command to install everything. This is nice because anything created by WordPress (e.g. adding a plugin through the admin) or you (uploading an image) will show up in these directories just like they would on a server.
+
+5 uploads.ini
+We need to create one more file before we run the command to install everything. In the docker-compose.yml file at the end, directly below where we define the wp-content directory, you’ll see a second parameter defining an uploads.ini file. Create a new file and save it as uploads.ini in the same directory the docker-compose.yml file is in. In this file paste the following:
+
+file_uploads = On
+memory_limit = 64M
+upload_max_filesize = 64M
+post_max_size = 64M
+max_execution_time = 600
+When you initiate a new Docker setup the default file upload limit is 2 MB, which is not ideal for a local development environment. So to increase the upload limit we specify our own uploads.ini file and set a new, more generous limit there. It’s important to create this file first because if you run the docker command in Section 6 before the file exists it will create it as a directory and you won’t be able to add any configuration code to it (because it’s a folder, not a file). There’s likely a better setup to avoid this, but for now this gets the job done.
+
+6 Run Docker Compose
+Now we’re ready to run the Docker command that will build our local environment. In Terminal, make sure you are still in the directory we created in Section 3 (again you can check for the docker-compose.yml file by typing the ls command) and run the following command (when I say “run” I mean type and hit enter, just in case that’s not obvious):
+
+docker-compose up -d
+The command will begin running scripts and you should see various “Downloading” and “Waiting” messages appear in Terminal. This will take a little while to run.
+
+7 Install WordPress
+Once the script has finished running (you’ll know because the messages will stop scrolling on the screen and the terminal will be ready for you to type in it again) go to this URL in your browser (or if you changed the port number, go to whatever port you changed it to):
+
+http://localhost:8000/
+The standard WordPress installation screen should appear. Complete the installation like you normally would and then login to WordPress. As you can see you have a regular WordPress installation. Go to ‘Appearance > Themes’ and you’ll see the default WordPress themes. We’re almost finished.
+
+8 Create the WordPress Theme
+If you go back to the directory you created in Section 3 — this time open it in Finder — you’ll now see along with the docker-compose.yml file a wp-content directory and in there a themes directory and in there the default WordPress themes. This is just like having a normal WordPress install. Create a new folder and give it the name of your theme and then create an index.php and style.css file in the theme folder.
+
+style.css
+/*
+Theme Name: My Theme
+Author: David Yeiser
+Author URI: http://davidyeiser.com/
+Description: Sample theme for Docker setup.
+Version: 0.1
+*/
+index.php
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+  <meta charset="<?php bloginfo( 'charset' ); ?>">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <?php wp_head(); ?>
+</head>
+
+<body <?php body_class(); ?>>
+
+<div class="wrap">
+  <div id="primary" class="content-area">
+    <main id="main" class="site-main" role="main">
+
+      <?php
+      if (have_posts()) :
+        /* Start the Loop */
+        while (have_posts()) : the_post();
+      ?>
+        <div>
+          <a href="<?php the_permalink(); ?>"><h3><?php the_title(); ?></h3></a>
+        </div>
+      <?php
+        endwhile;
+        /* End the Loop */
+      else :
+        // Nothing
+      endif;
+      ?>
+
+    </main><!-- #main -->
+  </div><!-- #primary -->
+</div><!-- .wrap -->
+
+<?php get_footer(); ?>
+<?php wp_footer(); ?>
+
+</body>
+</html>
+Save these files then refresh the themes page in your browser. You should now see your theme among the others. Activate your theme then go to http://localhost:8000/ and you should see the “Hello World!” post linked — that’s our theme!
+
+From there you can develop the theme as you normally would. I’ve included three links at the end of this post for further reference if you’d like to learn more. And as mentioned in the beginning all the code from this tutorial is on GitHub: docker-wordpress-theme-setup.

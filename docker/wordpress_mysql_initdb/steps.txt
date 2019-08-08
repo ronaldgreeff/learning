@@ -1,0 +1,227 @@
+https://rajislearning.com/wordpress-development-with-docker-compose/
+
+Step: 1 – Folders and directories
+To well organize the project and avoid any confusion while development we will create two directories in our project
+
+docker:
+To hold all our common docker files like wordpress and MYSQL
+
+wp-content:
+This folder will have our plugin or theme development code
+
+Step: 2 – DockerFiles for wordpress and MYSQL
+WordPress docker image does not have database setup and needs an active database running to connect to. So we will first create our database container. I have decided to use MYSQL but you can use mariaDB as well.
+
+Create folder “mysql” inside docker directory
+Create an empty file named “DockerFile” inside mysql folder
+Add the following code in the DockerFile:
+
+
+
+# MYSQL
+FROM mysql:5.7
+MAINTAINER Rajinder Deol <deol.rajinder@gmail>
+
+ENV MYSQL_ROOT_PASSWORD wordpress
+ENV MYSQL_DATABASE wordpress
+
+
+This DockerFile will build the MYSQL database and ENV MYSQL_ROOT_PASSWORD, ENV MYSQL_DATABASE will set the password and database name. We will use these values in out wordpress Dockerfile
+
+After creating the database DockerFile, now we will move on to wordpress DockerFile.
+
+Come back to the docker directory and create a new directory named “wordpress” inside it.
+Now create a blank file named “DockerFile” inside the wordpress directory.
+Add the following code in the DockerFile:
+
+
+
+#wordpress
+FROM wordpress:latest
+
+
+Step: 3 – Docker Compose to link both the wordpress and MYSQL containers
+So far we have created two DockerFiles in docker/mysql and docker/wordpress within our project folder for mysql and wordpress. Now we will use docker-compose to link these two containers with each other. Docker Compose also help us to run these two containers with single command and manage their properties from a single file.
+
+Docker compose requires docker-compose.yml file to read the configuration and build and run the containers. Lets create our docker-compose.yml file:
+
+In the project folder create an empty file named “docker-compose.yml”
+Add the following code to configure MYSQL container :
+
+
+
+## wordpress container.
+# wordpress MYSQL database
+database:
+  build: docker/mysql
+  # so that I can access it within 
+  # mysqlworkbench on my machine
+  ports:
+    - "3306:3306"
+  environment:
+    - MYSQL_USER=wordpress
+    - MYSQL_PASSWORD=wordpress
+
+
+
+This configuration will execute the DockerFile in docker/mysql folder. It will also forward the port 3306 on my host machine to port 3306 of container. This will help me connect to MYSQL database with MysqlWorkBench installed on my machine. We have also set the environment variables used by MYSQL container to create user with password.
+
+Now we will add configuration for wordpress container.
+Add the following code under the MYSQL configuration in the docker-compose.yml file:
+
+
+
+wordpress:
+    links:
+    # to access database container
+    - database:database
+    build: docker/wordpress
+    # I dont want to block my port 80 as 
+    # I run other containers which are forwarded to port 80
+    ports:
+       - "8000:80"
+    restart: always
+    volumes:
+      # So that my plugin development in wp-content maps to container wp-content
+      - ./wp-content:/var/www/html/wp-content
+    environment:
+       WORDPRESS_DB_HOST: database:3306
+       WORDPRESS_DB_PASSWORD: wordpress
+
+
+
+This configuration will build the DockerFile located at docker/wordpress
+
+I have forwarded port 8000 of my machine to port 80 of the wordpress container. You can use port 80 but I usually run more than one application on my system which require port 80 to be available so I used port 8000.
+
+We have linked the MYSQL container with wordpress via links: attribute in the configuration. WordPress requires environment variables WORDPRESS_DB_HOST and WORDPRESS_DB_PASSWORD to access database.
+
+WordPress container has wordpress codebase installed in /var/www/html/ directory inside the container. To retain our development code during container restarts we have mounted our project “wp-content” folder to container’s /var/www/html/wp-content folder under volumes: attribute of wordpress configuration.
+
+Step: 5 – Build and Run wordpress container
+Make sure docker-compose is installed on you machine along with docker. Go to your project directory and run the following command:
+
+
+
+
+docker-compose build
+
+
+This command will download the wordpress and MYSQL docker images from the DockerHub and build your containers.
+
+Now run:
+
+
+
+
+docker-compose up
+
+
+This command will fire up MYSQL and wordpress container. Once containers are up and running you will be able to access your fresh wordpress site at http://localhost:8000
+
+Step: 6 – Default wordpress data for MYSQL container
+By default the MYSQL container will not retain the wordpress data and when you will restart the containers you will again find the default install screen of wordpress.
+
+You can solve this by mounting a volume for MYSQL container, however for most of my development I need basic installed wordpress with some default data to work with the development
+
+So I have created a sql file named “wordpress_data.sql” with default data, inside the docker/mysql folder.
+
+MYSQL container will import any sql file placed inside the /docker-entrypoint-initdb.d/ directory. So I have updated the mysql DockerFile and added an additional line to add this file to /docker-entrypoint-initdb.d/ directory. Now the mysql DockerFile should look like:
+
+
+
+
+# MYSQL
+FROM mysql:5.7
+MAINTAINER Rajinder Deol <deol.rajinder@gmail>
+
+ENV MYSQL_ROOT_PASSWORD wordpress
+ENV MYSQL_DATABASE wordpress
+
+# wordpress basic sql to start with
+# MYSQL will import the sql file at startup
+ADD wordpress_data.sql /docker-entrypoint-initdb.d/
+
+
+Now with every docker container rebuild or restart, I will have my default data loaded in wordpress. Having the default data will also help to test the plugin or theme which we are developing.
+
+Step: 7 – Proper file permissions of wp-content folder so that you can use your favorite editor
+When the container is up and running, user www-data is set as owner of the wp-content folder. www-data is apache user which will access the wordpress content when site is loaded. However this will not allow us to edit the content of wp-content folder from host machine.
+
+Although we have mounted our project’s wp-content folder to the container’s /var/www/html/wp-content folder but due to www-data being the owner of this folder we will not be able to edit the files inside this folder.
+
+The solution is to create a user inside the container which has our UID and allow it to read/write the /var/www/html/wp-content folder.
+
+To make it reusable on any machine, I cannot hardcode the UID of current user, so we will dynamically export the UID of current user into UID variable.
+
+Run the following command:
+
+
+   export UID=$(id -u $USER)
+There is a default USER environment variable which hold the user name of current logged-in user. We will use these variables in our docker-compose.yml file and create two environment variables to be used inside wordpress container.
+
+Now the wordpress configuration block in the docker-compose.yml file should look like :
+
+
+ wordpress:
+    links:
+    # to access database container
+    - database:database
+    build: docker/wordpress
+    # I dont want to block my port 80 as 
+    # I run other containers which are forwarded to port 80
+    ports:
+       - "8000:80"
+    restart: always
+    volumes:
+      # So that my plugin development in wp-content maps to container wp-content
+      - ./wp-content:/var/www/html/wp-content
+    environment:
+       WORDPRESS_DB_HOST: database:3306
+       WORDPRESS_DB_PASSWORD: wordpress
+       LOCAL_USER_ID: $UID
+       LOCAL_USER_NAME: $USER
+We have added two environment variables LOCAL_USER_ID and LOCAL_USER_NAME which will be availabe inside the wordpress container.
+
+I have created a shell script to use these variables and create the user. This script will also add the appropriate permission for this user to read/write /var/www/html/wp-content folder.
+
+The script file is named as setuser.sh and it is placed under docker/wordpress folder of our project. The file contains following code:
+
+
+#!/bin/bash
+
+USER_ID=${LOCAL_USER_ID:-9001}
+USER_NAME=${LOCAL_USER_NAME:-hostuser}
+
+echo "Starting with UID : $USER_ID and UNAME : $USER_NAME"
+echo "create $USER_NAME group if it doesnot exists"
+getent group $USER_NAME || groupadd $USER_NAME
+echo "create Adding User to group"
+id -u $USER_NAME || useradd --shell /bin/bash -u $USER_ID -o -c "" -G $USER_NAME -m $USER_NAME
+setfacl -R -m g:$USER_NAME:rwX /var/www/html/wp-content
+Now we have to figure out a way to execute this script when wordpress container starts.
+
+Unlike MYSQL container wordpress container does not have an option to run custom scripts during startup of the container. WordPress container has a docker-entrypoint.sh file which it executes to setup the container. The trick is to add a line in it at runtime to run our script right before it starts the apache.
+
+After looking at the docker-entrypoint.sh and DockerFile I found that docker-entrypoint.sh file is copied to /usr/local/bin/ directory and then it is executed at the runtime so all I need to do is add a line in this file right before it executes the apache start command to run our setuser.sh file.
+
+Lets update our wordpress DockerFile located in docker/wordpress folder and add the code. Now the DockerFile should have following code:
+
+
+#wordpress
+FROM wordpress:latest
+COPY setuser.sh /var/www/html
+RUN chmod +x /var/www/html/setuser.sh
+# hacking into wordpress entry file 
+# and adding my script right before the exit
+RUN sed -i '/^exec "\$@"/i sh /var/www/html/setuser.sh' /usr/local/bin/docker-entrypoint.sh
+Step: 8 – Run your containers
+After following all the above steps, now you just need to run the below commands to run your containers. Get to your project folder and execute the following commands:
+
+
+export UID=$(id -u $USER)
+
+docker-compose build
+
+docker-compose up
+You can download the full code from my github docker-compose-wordpress
