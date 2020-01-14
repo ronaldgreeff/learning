@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  nginx:
+    build: .
+    volumes:
+      - nginx_files:/var/nginx_files
+volumes:
+  nginx_files:

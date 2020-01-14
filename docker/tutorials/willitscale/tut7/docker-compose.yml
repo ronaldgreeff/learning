@@ -9,7 +9,7 @@ networks:
         - subnet: 172.10.1.0/24
   tut07-backend:
     driver: bridge
-    ipam: 
+    ipam:
       driver: default
       config:
         - subnet: 172.10.2.0/23
